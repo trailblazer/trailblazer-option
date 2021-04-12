@@ -1,14 +1,14 @@
 require "test_helper"
 
 class OptionTest < Minitest::Spec
-  def assert_result(result, block = nil)
-    _(result).must_equal([{a: 1}, 2, {b: 3}, block])
-
-    _(positional.inspect).must_equal %({:a=>1})
-    _(keywords.inspect).must_equal %({:a=>2, :b=>3})
-  end
-
   describe "positional and kws" do
+    def assert_result(result, block = nil)
+      _(result).must_equal([{a: 1}, 2, {b: 3}, block])
+
+      _(positional.inspect).must_equal %({:a=>1})
+      _(keywords.inspect).must_equal %({:a=>2, :b=>3})
+    end
+
     class Step
       def with_positional_and_keywords(options, a: nil, **more_options, &block)
         [options, a, more_options, block]
@@ -73,13 +73,8 @@ class OptionTest < Minitest::Spec
 
   describe "positionals" do
     def assert_result_pos(result)
-      if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("2.7.0")
-        _(result).must_equal([1, 2, [3, 4]])
-        _(positionals).must_equal [1, 2, 3, 4]
-      else
-        _(result).must_equal([1, 2, [3, 4, {}]])
-        _(positionals).must_equal [1, 2, 3, 4]
-      end
+      _(result).must_equal([1, 2, [3, 4]])
+      _(positionals).must_equal [1, 2, 3, 4]
     end
 
     # In Ruby < 3.0, {*args} will grab both positionals and keyword arguments.
@@ -165,6 +160,46 @@ class OptionTest < Minitest::Spec
       option = Trailblazer::Option(WithKeywords)
 
       assert_result_kws option.(keyword_arguments: keywords, exec_context: "something")
+    end
+  end
+
+  describe "no arguments" do
+    def assert_result_no_args(result)
+      _(result).must_equal([])
+    end
+
+    class Step
+      def with_no_args
+        []
+      end
+    end
+
+    class WithNoArgs
+      def self.call
+        []
+      end
+    end
+
+    WITH_NO_ARGS = -> { [] }
+
+    it ":method" do
+      step = Step.new
+
+      option = Trailblazer::Option(:with_no_args)
+
+      assert_result_no_args option.(exec_context: step)
+    end
+
+    it "-> {} lambda" do
+      option = Trailblazer::Option(WITH_NO_ARGS)
+
+      assert_result_no_args option.(exec_context: "something")
+    end
+
+    it "callable" do
+      option = Trailblazer::Option(WithNoArgs)
+
+      assert_result_no_args option.(exec_context: "something")
     end
   end
 end
