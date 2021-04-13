@@ -3,10 +3,17 @@ module Trailblazer
     # A call implementation invoking `value.(*args, **keyword_arguments)` and plainly forwarding all arguments.
     # Override this for your own step strategy.
     # @private
-    def self.call!(value, *args, signal: :call, keyword_arguments: {}, **, &block)
-      # {**keyword_arguments} gets removed automatically if it's an empty hash.
-      # DISCUSS: is this a good practice?
-      value.public_send(signal, *args, **keyword_arguments, &block)
+    if Gem::Version.new(RUBY_VERSION) >= Gem::Version.new('2.7.0')
+      def self.call!(value, *args, signal: :call, keyword_arguments: {}, **, &block)
+        # NOTE: {**keyword_arguments} gets removed automatically if it's an empty hash.
+        value.public_send(signal, *args, **keyword_arguments, &block)
+      end
+    else
+      # Don't pass empty `keyword_arguments` because Ruby <= 2.6 passes an empty hash for `**{}`
+      def self.call!(value, *args, signal: :call, keyword_arguments: nil, **, &block)
+        return value.public_send(signal, *args, &block) unless keyword_arguments
+        value.public_send(signal, *args, **keyword_arguments, &block)
+      end
     end
 
     # Note that #evaluate_callable, #evaluate_proc and #evaluate_method drop most of the args.
