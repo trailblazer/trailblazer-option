@@ -36,24 +36,18 @@ module Trailblazer
       call!(exec_context.method(value), *args, **options, &block)
     end
 
-    # Choose appropriate evaluator and forward all arguments.
-    # @private
-    def self.evaluator(value, *args, **options, &block)
+    # Generic builder for a callable "option".
+    # @param call_implementation [Class, Module] implements the process of calling the proc
+    #   while passing arguments/options to it in a specific style (e.g. kw args, step interface).
+    # @return [Proc] when called, this proc will evaluate its option (at run-time).
+    def self.build(value)
       evaluate = case value
                  when Symbol then  method(:evaluate_method)
                  when Proc   then  method(:evaluate_proc)
                  else              method(:evaluate_callable)
                  end
 
-      evaluate.(value, *args, **options, &block)
-    end
-
-    # Generic builder for a callable "option".
-    # @param call_implementation [Class, Module] implements the process of calling the proc
-    #   while passing arguments/options to it in a specific style (e.g. kw args, step interface).
-    # @return [Proc] when called, this proc will evaluate its option (at run-time).
-    def self.build(value)
-      ->(*args, **options, &block) { evaluator(value, *args, **options, &block) }
+      ->(*args, **options, &block) { evaluate.(value, *args, **options, &block) }
     end
   end
 
